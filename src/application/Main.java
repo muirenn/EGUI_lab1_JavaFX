@@ -165,14 +165,12 @@ public class Main extends Application {
 						if (groupFilter.getSelectedToggle() != null
 								&& groupFilter.getSelectedToggle().getUserData() != null)
 							try {
-								// System.out.println(groupFilter.getSelectedToggle().getUserData().toString());
 								filter(groupFilter.getSelectedToggle().getUserData().toString());
 							} catch (IOException | ParseException e1) {
 								// TODO Auto-generated catch block
 								e1.printStackTrace();
 							}
 
-						// System.out.println(groupFilter.getSelectedToggle().getUserData().toString());
 					});
 
 			cbNotCompleted.selectedProperty().addListener(new ChangeListener<Boolean>() {
@@ -197,8 +195,6 @@ public class Main extends Application {
 						chosenFile = file;
 						if (chosenFile != null) {
 							try {
-								// System.out.println(chosenFile.getName());
-								// System.out.println(groupFilter.getSelectedToggle().getUserData().toString());;
 								filter(groupFilter.getSelectedToggle().getUserData().toString());
 							} catch (IOException | ParseException e1) {
 								// TODO Auto-generated catch block
@@ -233,11 +229,14 @@ public class Main extends Application {
 		// 1. Wrap the ObservableList in a FilteredList (initially display all data).
 		FilteredList<Task> filteredData = new FilteredList<Task>(tasks);
 		Date today = new Date();
-
+		today.setHours(0);
+		today.setMinutes(0);
+		today.setSeconds(0);
+		
 		switch (type) {
 		case "Overdue":
 			filteredData.setPredicate(task -> {
-				if (task.getDueDate().getTime() < today.getTime()
+				if (today.getTime() - task.getDueDate().getTime() > 1000
 						&& (task.getCompleted() || cbNotCompleted.selectedProperty().getValue())) {
 					return true;
 				} else
@@ -246,7 +245,7 @@ public class Main extends Application {
 			break;
 		case "Today":
 			filteredData.setPredicate(task -> {
-				if (task.getDueDate() == today
+				if (Math.abs(task.getDueDate().getTime() - today.getTime()) <= 1000
 						&& (task.getCompleted() || cbNotCompleted.selectedProperty().getValue())) {
 					return true;
 				} else
@@ -256,7 +255,7 @@ public class Main extends Application {
 		case "This week":
 			filteredData.setPredicate(task -> {
 				if (((task.getDueDate().getTime() - today.getTime() <= 7 * 24 * 60 * 60 * 1000)
-						&& (task.getDueDate().getTime() - today.getTime() > 0))
+						&& (task.getDueDate().getTime() - today.getTime() > 1000))
 						&& (task.getCompleted() || cbNotCompleted.selectedProperty().getValue())) {
 					return true;
 				} else
@@ -289,7 +288,6 @@ public class Main extends Application {
 				line = br.readLine();
 			}
 			String everything = sb.toString();
-			System.out.println(everything);
 
 			String delims = "[\n]";
 			String[] tokens = everything.split(delims);
@@ -298,7 +296,6 @@ public class Main extends Application {
 
 			for (int i = 0; i < tokens.length; i++) {
 				tasks.add(new Task(tokens[i]));
-				System.out.println(i + " " + tokens[i]);
 			}
 
 		} finally {
