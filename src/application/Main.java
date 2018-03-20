@@ -6,6 +6,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
@@ -15,6 +17,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Menu;
@@ -23,6 +26,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellDataFeatures;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.Toggle;
@@ -165,6 +169,7 @@ public class Main extends Application {
 			mainGridPane.addRow(2, tvTasks);
 			mainVBox.getChildren().addAll(mainMenuBar, mainGridPane);
 			primaryStage.setScene(scene);
+			primaryStage.setTitle("ToDo List");
 			primaryStage.show();
 			
 			
@@ -209,6 +214,19 @@ public class Main extends Application {
 
 					}
 				}
+			});
+			
+			tvTasks.setRowFactory( tv -> {
+			    TableRow<Task> row = new TableRow<Task>();
+			    row.setOnMouseClicked(event -> {
+			        if (event.getClickCount() == 2 && (! row.isEmpty()) ) {
+			        	Task rowData = row.getItem();
+			        	//
+			        	System.out.println(rowData.getTitle());
+			        	openEditor();
+			        }
+			    });
+			    return row ;
 			});
 
 		} catch (Exception e) {
@@ -304,6 +322,21 @@ public class Main extends Application {
 		descriptionCol.setCellValueFactory(new PropertyValueFactory<Task, String>("description"));
 
 		tvTasks.setItems(tasks);
+	}
+	
+	public void openEditor() {
+	    try {
+	        Scene scene = new Scene(FXMLLoader.load(getClass().getClassLoader().getResource("EditWindow.fxml")), 600, 400);
+	        Stage stage = new Stage();
+	        stage.setTitle("Edit an Entry");
+	        stage.setScene(scene);
+	        
+	        
+	        stage.show();
+	    } catch (IOException e) {
+	        Logger logger = Logger.getLogger(getClass().getName());
+	        logger.log(Level.SEVERE, "Failed to create new Window.", e);
+	    }
 	}
 
 	public static void main(String[] args) {

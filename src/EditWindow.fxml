@@ -33,7 +33,7 @@
             <Button mnemonicParsing="false" prefHeight="25.0" prefWidth="110.0" text="Add/Save" BorderPane.alignment="CENTER" />
          </left>
          <right>
-            <Button mnemonicParsing="false" prefHeight="25.0" prefWidth="112.0" text="Cancel" BorderPane.alignment="CENTER" />
+            <Button mnemonicParsing="false" onKeyPressed="#cancelPressed" prefHeight="25.0" prefWidth="112.0" text="Cancel" BorderPane.alignment="CENTER" />
          </right>
       </BorderPane>
    </children>
