@@ -5,11 +5,14 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.Date;
 
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
@@ -92,28 +95,6 @@ public class Main extends Application {
 			closeFileMenuItem = new MenuItem("Close");
 			fileMenu.getItems().addAll(openFileMenuItem, saveFileMenuItem, closeFileMenuItem);
 
-			fileChooser = new FileChooser();
-			chosenFile = null;
-			openFileMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-				@Override
-				public void handle(final ActionEvent e) {
-					File file = fileChooser.showOpenDialog(primaryStage);
-					if (file != null) {
-						chosenFile = file;
-						if (chosenFile != null)
-							try {
-								loadFromFile();
-							} catch (IOException e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							} catch (ParseException e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							}
-					}
-				}
-			});
-
 			// Edit menu
 			editMenu = new Menu();
 			editMenu.setId("Edit");
@@ -137,16 +118,21 @@ public class Main extends Application {
 			hbFilters.setSpacing(10);
 			final ToggleGroup groupFilter = new ToggleGroup();
 			rbAll = new RadioButton("All");
+			rbAll.setUserData("All");
 			rbAll.setToggleGroup(groupFilter);
 			rbAll.setSelected(true);
 			rbOverdue = new RadioButton("Overdue");
+			rbOverdue.setUserData("Overdue");
 			rbOverdue.setToggleGroup(groupFilter);
 			rbToday = new RadioButton("Today");
+			rbToday.setUserData("Today");
 			rbToday.setToggleGroup(groupFilter);
 			rbThisweek = new RadioButton("This week");
+			rbThisweek.setUserData("This week");
 			rbThisweek.setToggleGroup(groupFilter);
 
 			cbNotCompleted = new CheckBox("Not completed");
+
 			hbFilters.getChildren().addAll(rbAll, rbOverdue, rbToday, rbThisweek, cbNotCompleted);
 
 			filtersTP.setContent(hbFilters);
@@ -156,6 +142,7 @@ public class Main extends Application {
 			tvTasks = new TableView<Task>();
 
 			cbDone = new CheckBox();
+			cbDone.setDisable(true);
 			doneCol = new TableColumn<Task, Boolean>("");
 			doneCol.graphicProperty();
 			doneCol.setGraphic(cbDone);
@@ -175,16 +162,52 @@ public class Main extends Application {
 
 			groupFilter.selectedToggleProperty()
 					.addListener((ObservableValue<? extends Toggle> ov, Toggle old_toggle, Toggle new_toggle) -> {
-						if (groupFilter.getSelectedToggle() != null)
+						if (groupFilter.getSelectedToggle() != null
+								&& groupFilter.getSelectedToggle().getUserData() != null)
 							try {
+								// System.out.println(groupFilter.getSelectedToggle().getUserData().toString());
 								filter(groupFilter.getSelectedToggle().getUserData().toString());
-							} catch (IOException e1) {
+							} catch (IOException | ParseException e1) {
 								// TODO Auto-generated catch block
 								e1.printStackTrace();
 							}
+
 						// System.out.println(groupFilter.getSelectedToggle().getUserData().toString());
-						;
 					});
+
+			cbNotCompleted.selectedProperty().addListener(new ChangeListener<Boolean>() {
+				@Override
+				public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+					try {
+						filter(groupFilter.getSelectedToggle().getUserData().toString());
+					} catch (IOException | ParseException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			});
+
+			fileChooser = new FileChooser();
+			chosenFile = null;
+			openFileMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(final ActionEvent e) {
+					File file = fileChooser.showOpenDialog(primaryStage);
+					if (file != null) {
+						chosenFile = file;
+						if (chosenFile != null) {
+							try {
+								// System.out.println(chosenFile.getName());
+								// System.out.println(groupFilter.getSelectedToggle().getUserData().toString());;
+								filter(groupFilter.getSelectedToggle().getUserData().toString());
+							} catch (IOException | ParseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+						}
+					}
+				}
+			});
 
 			tvTasks.getColumns().addAll(doneCol, dateCol, titleCol, percentCol, descriptionCol);
 			tvTasks.setItems(tasks);
@@ -199,29 +222,62 @@ public class Main extends Application {
 		}
 	}
 
-	public void filter(String type) throws IOException {
+	public void filter(String type) throws IOException, ParseException {
 		// ObservableList<Task> tasks;
-		
-		if(tasks == null)
+
+		if (chosenFile == null && tasks == null)
 			return;
-		
+
+		loadFromFile();
+
+		// 1. Wrap the ObservableList in a FilteredList (initially display all data).
+		FilteredList<Task> filteredData = new FilteredList<Task>(tasks);
+		Date today = new Date();
+
 		switch (type) {
-		case "All":
-			break;
 		case "Overdue":
+			filteredData.setPredicate(task -> {
+				if (task.getDueDate().getTime() < today.getTime()
+						&& (task.getCompleted() || cbNotCompleted.selectedProperty().getValue())) {
+					return true;
+				} else
+					return false;
+			});
 			break;
 		case "Today":
+			filteredData.setPredicate(task -> {
+				if (task.getDueDate() == today
+						&& (task.getCompleted() || cbNotCompleted.selectedProperty().getValue())) {
+					return true;
+				} else
+					return false;
+			});
 			break;
 		case "This week":
+			filteredData.setPredicate(task -> {
+				if (((task.getDueDate().getTime() - today.getTime() <= 7 * 24 * 60 * 60 * 1000)
+						&& (task.getDueDate().getTime() - today.getTime() > 0))
+						&& (task.getCompleted() || cbNotCompleted.selectedProperty().getValue())) {
+					return true;
+				} else
+					return false;
+			});
 			break;
 		default:
+			filteredData.setPredicate(task -> {
+				if (!(task.getCompleted() || cbNotCompleted.selectedProperty().getValue())) {
+					return false;
+				} else
+					return true;
+			});
 			break;
 		}
 
+		tasks = FXCollections.observableArrayList(filteredData);
+		refreshLists();
 	}
 
 	public void loadFromFile() throws IOException, ParseException {
-
 		BufferedReader br = new BufferedReader(new FileReader(chosenFile.getAbsolutePath()));
 		try {
 			StringBuilder sb = new StringBuilder();
@@ -239,7 +295,7 @@ public class Main extends Application {
 			String[] tokens = everything.split(delims);
 
 			tasks = FXCollections.observableArrayList();
-			
+
 			for (int i = 0; i < tokens.length; i++) {
 				tasks.add(new Task(tokens[i]));
 				System.out.println(i + " " + tokens[i]);
@@ -249,6 +305,9 @@ public class Main extends Application {
 			br.close();
 		}
 
+	}
+
+	public void refreshLists() {
 		doneCol.setCellValueFactory(new PropertyValueFactory<Task, Boolean>("completed"));
 		doneCol.setCellValueFactory(new Callback<CellDataFeatures<Task, Boolean>, ObservableValue<Boolean>>() {
 			@Override
@@ -261,9 +320,8 @@ public class Main extends Application {
 		titleCol.setCellValueFactory(new PropertyValueFactory<Task, String>("title"));
 		percentCol.setCellValueFactory(new PropertyValueFactory<Task, Integer>("percent"));
 		descriptionCol.setCellValueFactory(new PropertyValueFactory<Task, String>("description"));
-		
-		tvTasks.setItems(tasks);
 
+		tvTasks.setItems(tasks);
 	}
 
 	public static void main(String[] args) {
