@@ -55,6 +55,7 @@ public class Main extends Application {
 
 	// Filters section
 	HBox hbFilters;
+	ToggleGroup groupFilter;
 	RadioButton rbAll;
 	RadioButton rbOverdue;
 	RadioButton rbToday;
@@ -116,7 +117,7 @@ public class Main extends Application {
 			// Filters section
 			hbFilters = new HBox(3);
 			hbFilters.setSpacing(10);
-			final ToggleGroup groupFilter = new ToggleGroup();
+			groupFilter = new ToggleGroup();
 			rbAll = new RadioButton("All");
 			rbAll.setUserData("All");
 			rbAll.setToggleGroup(groupFilter);
@@ -158,8 +159,16 @@ public class Main extends Application {
 
 			descriptionCol = new TableColumn<Task, String>("Description");
 			descriptionCol.setMinWidth(250);
-			// tvTasks.setColumnResizePolicy((param) -> true );
+			tvTasks.getColumns().addAll(doneCol, dateCol, titleCol, percentCol, descriptionCol);
 
+			mainGridPane.addRow(1, filtersTP);
+			mainGridPane.addRow(2, tvTasks);
+			mainVBox.getChildren().addAll(mainMenuBar, mainGridPane);
+			primaryStage.setScene(scene);
+			primaryStage.show();
+			
+			
+			
 			groupFilter.selectedToggleProperty()
 					.addListener((ObservableValue<? extends Toggle> ov, Toggle old_toggle, Toggle new_toggle) -> {
 						if (groupFilter.getSelectedToggle() != null
@@ -170,7 +179,6 @@ public class Main extends Application {
 								// TODO Auto-generated catch block
 								e1.printStackTrace();
 							}
-
 					});
 
 			cbNotCompleted.selectedProperty().addListener(new ChangeListener<Boolean>() {
@@ -190,29 +198,19 @@ public class Main extends Application {
 			openFileMenuItem.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(final ActionEvent e) {
-					File file = fileChooser.showOpenDialog(primaryStage);
-					if (file != null) {
-						chosenFile = file;
-						if (chosenFile != null) {
-							try {
-								filter(groupFilter.getSelectedToggle().getUserData().toString());
-							} catch (IOException | ParseException e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							}
+					chosenFile = fileChooser.showOpenDialog(primaryStage);
+					if (chosenFile != null) {
+						try {
+							filter(groupFilter.getSelectedToggle().getUserData().toString());
+						} catch (IOException | ParseException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
 						}
+
 					}
 				}
 			});
 
-			tvTasks.getColumns().addAll(doneCol, dateCol, titleCol, percentCol, descriptionCol);
-			tvTasks.setItems(tasks);
-
-			mainGridPane.addRow(1, filtersTP);
-			mainGridPane.addRow(2, tvTasks);
-			mainVBox.getChildren().addAll(mainMenuBar, mainGridPane);
-			primaryStage.setScene(scene);
-			primaryStage.show();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -232,42 +230,30 @@ public class Main extends Application {
 		today.setHours(0);
 		today.setMinutes(0);
 		today.setSeconds(0);
-		
+
 		switch (type) {
 		case "Overdue":
 			filteredData.setPredicate(task -> {
-				if (today.getTime() - task.getDueDate().getTime() > 1000
-						&& (task.getCompleted() || cbNotCompleted.selectedProperty().getValue())) {
-					return true;
-				} else
-					return false;
+				return (today.getTime() - task.getDueDate().getTime() > 1000
+						&& (task.getCompleted() || cbNotCompleted.selectedProperty().getValue()));
 			});
 			break;
 		case "Today":
 			filteredData.setPredicate(task -> {
-				if (Math.abs(task.getDueDate().getTime() - today.getTime()) <= 1000
-						&& (task.getCompleted() || cbNotCompleted.selectedProperty().getValue())) {
-					return true;
-				} else
-					return false;
+				return (Math.abs(task.getDueDate().getTime() - today.getTime()) <= 1000
+						&& (task.getCompleted() || cbNotCompleted.selectedProperty().getValue()));
 			});
 			break;
 		case "This week":
 			filteredData.setPredicate(task -> {
-				if (((task.getDueDate().getTime() - today.getTime() <= 7 * 24 * 60 * 60 * 1000)
+				return (((task.getDueDate().getTime() - today.getTime() <= 7 * 24 * 60 * 60 * 1000)
 						&& (task.getDueDate().getTime() - today.getTime() > 1000))
-						&& (task.getCompleted() || cbNotCompleted.selectedProperty().getValue())) {
-					return true;
-				} else
-					return false;
+						&& (task.getCompleted() || cbNotCompleted.selectedProperty().getValue()));
 			});
 			break;
 		default:
 			filteredData.setPredicate(task -> {
-				if (!(task.getCompleted() || cbNotCompleted.selectedProperty().getValue())) {
-					return false;
-				} else
-					return true;
+				return (task.getCompleted() || cbNotCompleted.selectedProperty().getValue());
 			});
 			break;
 		}
@@ -287,10 +273,9 @@ public class Main extends Application {
 				sb.append(System.lineSeparator());
 				line = br.readLine();
 			}
-			String everything = sb.toString();
 
 			String delims = "[\n]";
-			String[] tokens = everything.split(delims);
+			String[] tokens = sb.toString().split(delims);
 
 			tasks = FXCollections.observableArrayList();
 
